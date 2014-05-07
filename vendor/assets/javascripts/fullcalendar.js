@@ -87,10 +87,10 @@ var defaults = {
 		month: 'month',
 		week: 'week',
 		day: 'day',
-		resourceDay: 'resource day',
-		resourceWeek: 'resource week',
-		resourceNextWeeks: 'resource next weeks',
-		resourceMonth: 'resource month'
+		resourceDay: 'day',
+		resourceWeek: 'week',
+		resourceNextWeeks: 'next weeks',
+		resourceMonth: 'month'
 	},
 	
 	// jquery-ui theming

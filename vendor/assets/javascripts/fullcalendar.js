@@ -440,11 +440,11 @@ function Calendar(element, options, eventSources, resourceSources) {
 			
 			header.updateTitle(currentView.title);
 			var today = new Date();
-			if (today >= currentView.start && today < currentView.end) {
+			/*if (today >= currentView.start && today < currentView.end) {
 				header.disableButton('today');
 			}else{
 				header.enableButton('today');
-			}
+			}*/
 			
 			ignoreWindowResize--;
 			currentView.trigger('viewDisplay', _element);
@@ -1497,6 +1497,23 @@ function addMonths(d, n, keepTime) { // prevents day overflow/underflow
 	return d;
 }
 
+function subtractMonths(d, n, keepTime) { // prevents day overflow/underflow
+	if (+d) { // prevent infinite looping on invalid dates
+		var m = d.getMonth() - n,
+			check = cloneDate(d);
+		check.setDate(1);
+		check.setMonth(m);
+		d.setMonth(m);
+		if (!keepTime) {
+			clearTime(d);
+		}
+		while (d.getMonth() != check.getMonth()) {
+			d.setDate(d.getDate() + (d < check ? 1 : -1));
+		}
+	}
+	return d;
+}
+
 function addWeeks(d, n, keepTime) {
 	addDays(d, n * 7, keepTime);
 	return d;
@@ -1514,6 +1531,21 @@ function addDays(d, n, keepTime) { // deals with daylight savings
 		}
 		fixDate(d, check);
 	}
+	return d;
+}
+
+function subtractDays(d, n, keepTime) { // deals with daylight savings	
+	if (+d) {
+		var dd = d.getDate() - n,
+			check = cloneDate(d);
+		check.setHours(9); // set to middle of day
+		check.setDate(dd);
+		d.setDate(dd);		
+		if (!keepTime) {
+			clearTime(d);			
+		}
+		fixDate(d, check);		
+	}	
 	return d;
 }
 
@@ -4618,8 +4650,11 @@ function ResourceMonthView(element, calendar) {
 			}
 		}
 		else {	
-			var start = cloneDate(date.setDate(1), true);	
-			var end = addMonths(cloneDate(start.setDate(1), true), 1);	
+			var end = addDays(cloneDate(date), 1);	//addMonths(cloneDate(start.setDate(1), true), 1);
+			var start = subtractMonths(cloneDate(end), 1);//cloneDate(date.setDate(1), true);	
+			
+
+			
 		}
 
 		var visStart = cloneDate(start);
@@ -4654,6 +4689,13 @@ function ResourceMonthView(element, calendar) {
 		}
 		
 		renderBasic(getResources.length, getResources.length, cols, false);
+
+		if(delta == 0) {
+			t.start = cloneDate(date.setDate(1), true);	
+			t.end = addMonths(cloneDate(t.start.setDate(1), true), 1);
+			t.visStart = cloneDate(t.start);
+			t.visEnd = cloneDate(t.end); 		
+		}
 	}
 	
 	
@@ -4679,19 +4721,20 @@ function ResourceWeekView(element, calendar) {
 	
 	
 	function render(date, delta) {
+		
 		if (delta === 100 || delta === -100) {
 			// 100 means we want to skip full week (largePrev/largeNext pressed)
 			var start = addDays(date, (delta > 0 ? 7 : -7), false);
-			var end = addDays(cloneDate(start), 7);
+			var end = addDays(cloneDate(start), 7);			
 		}
 		else if (delta) {
 			var start = addDays(cloneDate(t.visStart), delta * opt('paginateResourceWeek'), false);
-			var end = addDays(cloneDate(start), 7);
+			var end = addDays(cloneDate(start), 7);			
 		}
-		else {
-			var start = addDays(cloneDate(date, true), -((date.getDay() - opt('firstDay') + 7) % 7));
-			var end = addDays(cloneDate(start), 7);
-		}
+		else {			
+			var end = addDays(cloneDate(date), 1); //addDays(cloneDate(start), 7);
+			var start = subtractDays(cloneDate(end), 7);//addDays(cloneDate(date, true), -((date.getDay() - opt('firstDay') + 7) % 7));			
+		}		
 
 		var visStart = cloneDate(start);
 		var visEnd = cloneDate(end);
@@ -4704,12 +4747,22 @@ function ResourceWeekView(element, calendar) {
 			visStart,
 			addDays(cloneDate(visEnd), -1),
 			opt('titleFormat')
-		);
+		);		
+
 		t.start = start;
 		t.end = end;
 		t.visStart = visStart;
 		t.visEnd = visEnd;
 		renderBasic(getResources.length, getResources.length, weekends ? 7 : 5, false);
+
+		if(delta == 0) {
+			t.start = addDays(cloneDate(date, true), -((date.getDay() - opt('firstDay') + 7) % 7));
+			t.end = addDays(cloneDate(t.start), 7);
+			t.visStart = cloneDate(t.start);
+			t.visEnd = cloneDate(t.end); 		
+		}
+		
+		
 	}
 }
 
@@ -4750,8 +4803,9 @@ function ResourceNextWeeksView(element, calendar) {
 			var end = addDays(cloneDate(start), opt('numberOfWeeks') * 7);
 		}
 		else {
-			var start = addDays(cloneDate(date), -((date.getDay() - opt('firstDay') + weekDays) % weekDays), false);
-			var end = addDays(cloneDate(start), opt('numberOfWeeks')*7);
+			
+			var end = addDays(cloneDate(date), 1);//addDays(cloneDate(start), opt('numberOfWeeks')*7);
+			var start = subtractDays(cloneDate(end), opt('numberOfWeeks')*7);//addDays(cloneDate(date), -((date.getDay() - opt('firstDay') + weekDays) % weekDays), false);
 		}
 
 		var visStart = cloneDate(start);
@@ -4772,6 +4826,13 @@ function ResourceNextWeeksView(element, calendar) {
 		t.visStart = visStart;
 		t.visEnd = visEnd;
 		renderBasic(getResources.length, getResources.length, weekends ? opt('numberOfWeeks') * 7 : opt('numberOfWeeks') * 5, false);
+
+		if(delta == 0) {
+			t.start = addDays(cloneDate(date), -((date.getDay() - opt('firstDay') + weekDays) % weekDays), false);
+			t.end = addDays(cloneDate(t.start), opt('numberOfWeeks')*7);
+			t.visStart = cloneDate(t.start);
+			t.visEnd = cloneDate(t.end); 		
+		}
 	}
 	
 	
@@ -5046,6 +5107,7 @@ function ResourceView(element, calendar, viewName) {
 
 			cell.html(formatDate(date, colFormat));
 			if (date.getDay() == 0 || date.getDay() == 6) cell.addClass('fc-weekend');
+			else cell.removeClass('fc-weekend');
 			
 			if (date.getDay() == 1 && viewName == "resourceNextWeeks") cell.html(cell.html()+'<br>'+opt('weekPrefix')+' '+iso8601Week(date));
 
@@ -5067,6 +5129,7 @@ function ResourceView(element, calendar, viewName) {
 			}
 			
 			if (date.getDay() == 0 || date.getDay() == 6) cell.addClass('fc-weekend-column');
+			else cell.removeClass('fc-weekend-column');
 			
 			cell.find('div.fc-day-number').text(date.getDate());
 			
